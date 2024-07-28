@@ -1,0 +1,89 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Image Classification App</title>  
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>  
+</head>  
+<body>  
+    <h1>Image Classification App</h1>  
+    <input type="file" id="file-input" accept="image/*">  
+    <button id="predict">Predict</button>  
+    <div id="result"></div>  
+
+    <script>  
+        const IMAGE_HEIGHT = 224; // Adjust to your model requirements  
+        const IMAGE_WIDTH = 224;  // Adjust to your model requirements  
+        let model;  
+
+        // Load the model  
+        async function loadModel() {  
+            model = await tf.loadLayersModel('https://teachablemachine.withgoogle.com/models/7sGpJJ82M/'); // Replace with your model URL  
+            console.log("Model Loaded");  
+        }  
+
+        // Preprocess the image  
+        function preprocessImage(image) {  
+            const tfImg = tf.browser.fromPixels(image)  
+                .resizeBilinear([IMAGE_HEIGHT, IMAGE_WIDTH])  
+                .expandDims(0)  
+                .toFloat(); // Ensure the image is a float tensor  
+            // Normalize if required (this example assumes normalization is needed)  
+            return tfImg.div(tf.scalar(255.0));  
+        }  
+
+        // Handle file input change  
+        document.getElementById('file-input').addEventListener('change', (event) => {  
+            const file = event.target.files[0];  
+            const img = document.createElement('img');  
+            const reader = new FileReader();  
+
+            reader.onload = (e) => {  
+                img.src = e.target.result;  
+                img.onload = () => { // When the image is fully loaded  
+                    const tensorImage = preprocessImage(img);  
+                    model.predict(tensorImage).array().then(predictions => {  
+                        // Assuming the predictions are probabilities for each class  
+                        const predictedClass = predictions[0].indexOf(Math.max(...predictions[0]));  
+                        document.getElementById('result').innerText = `Predicted class: ${predictedClass}`;  
+                    });  
+                };  
+            };  
+
+            reader.readAsDataURL(file);  
+        });  
+
+        // Predict button  
+        document.getElementById('predict').addEventListener('click', async () => {  
+            if (model) {  
+                const imageInput = document.getElementById('file-input').files[0];  
+                const img = document.createElement('img');  
+                const reader = new FileReader();  
+
+                reader.onload = (e) => {  
+                    img.src = e.target.result;  
+                    img.onload = () => {  
+                        const tensorImage = preprocessImage(img);  
+                        model.predict(tensorImage).array().then(predictions => {  
+                            const predictedClass = predictions[0].indexOf(Math.max(...predictions[0]));  
+                            document.getElementById('result').innerText = `Predicted class: ${predictedClass}`;  
+                        });  
+                    };  
+                };  
+
+                if (imageInput) {  
+                    reader.readAsDataURL(imageInput);  
+                } else {  
+                    alert("Please upload an image first.");  
+                }  
+            } else {  
+                alert("Model is not loaded yet, please wait.");  
+            }  
+        });  
+
+        // Load the model when the page loads  
+        window.onload = loadModel;  
+    </script>  
+</body>  
+</html>
